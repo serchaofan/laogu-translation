@@ -1,10 +1,10 @@
 * [与系统相关的方法](#与系统相关的方法)
   * [CPU](#CPU)
-  * Memory
-  * Disks
-  * Network
-  * Sensors
-  * Other system info
+  * [Memory](#Memory)
+  * [Disks](#Disks)
+  * [Network](Network)
+  * [Sensors](Sensors)
+  * [Other system info](#Other system info)
 
 psutil（进程和系统实用程序）是一个跨平台库，用于在Python中检索有关正在运行的进程和系统利用率（CPU，内存，磁盘，网络，传感器）的信息。它主要用于系统监视，分析和限制流程资源以及运行流程的管理。它实现了UNIX命令行工具提供的许多功能，例如：ps，top，lsof，netstat，ifconfig，who，df，kill，free，nice，ionice，iostat，iotop，uptime，pidof，tty，taskset，pmap。
 
@@ -79,31 +79,133 @@ scputimes(user=17411.7, nice=77.99, system=3797.02, idle=51266.57, iowait=732.58
 
 ### cpu_times_percent(interval=None, percpu=False)
 
+与`cpu_percent()`类似，将`psutil.cpu_times`返回的每个特定CPU时间转换为利用率百分比。 
+`interval`和`percpu`参数与`cpu_percent()`中的含义相同。在Linux上，`guest`和`guest_nice`百分比不计入`user`和`user_nice`百分比。
+
+> 第一次使用`interval = 0.0`或`None`调用此函数时，它将返回一个无意义的`0.0`值
+
+### cpu_count(logical=True)
+
+返回系统中的逻辑CPU数量，如果未确定则返回`None`。如果`logical`为`False`，则仅返回物理内核的数量（不包含超线程CPU），如果未确定则返回`None`。在OpenBSD和NetBSD上，`psutil.cpu_count(logical=False)`始终返回`None`。
+
+具有2个物理超线程CPU核心的系统上的示例：
+
+```
+>>> import psutil
+>>> psutil.cpu_count()
+4
+>>> psutil.cpu_count(logical=False)
+2
+```
+
+请注意，此数字**不等于当前进程实际可以使用的CPU数**。如果进程CPU关联性（addinity）已更改，或者正在使用Linux cgroup，或使用处理器组，或者具有64个以上的CPU，则可能会有所不同。可以通过以下方式获得可用CPU的数量：
+
+```
+>>> len(psutil.Process().cpu_affinity())
+1
+```
+
+### cpu_stats()
+
+返回各种CPU统计信息的元组数据。
+
+- **ctx_switches**: 自从系统启动以来的上下文切换次数，包括自愿（voluntary）与非自愿（involuntary）。
+- **interrupts**: 自从系统启动以来的中断数量
+- **soft_interrupts**: 自从系统启动以来的软件中断数量。在Windows和SunOS上总是为0
+- **syscalls**: 自从系统启动以来的系统调用（system calls）次数。在Linux上总为0
+
+```
+>>> import psutil
+>>> psutil.cpu_stats()
+scpustats(ctx_switches=20455687, interrupts=6598984, soft_interrupts=2134212, syscalls=0)
+```
+
+### cpu_freq(percpu=False)
+
+将CPU频率作为元组返回，包含当前（current），最小（min）和最大（max）频率，单位为Mhz。在Linux上，当前（current）频率报告的就是实时（real-time）值，在所有其他平台上它代表名义上的“固定”（fixed）值。
+
+如果`percpu`为`True`，且系统支持每个CPU频率检索（per-cpu frequency retrieval）（仅限Linux），则为每个CPU都会返回一个频率列表，否则返回包含单个元素的列表。如果无法确定最小值和最大值，则值会被设为0。
+
+```
+>>> import psutil
+>>> psutil.cpu_freq()
+scpufreq(current=931.42925, min=800.0, max=3500.0)
+>>> psutil.cpu_freq(percpu=True)
+[scpufreq(current=2394.945, min=800.0, max=3500.0),
+ scpufreq(current=2236.812, min=800.0, max=3500.0),
+ scpufreq(current=1703.609, min=800.0, max=3500.0),
+ scpufreq(current=1754.289, min=800.0, max=3500.0)]
+```
+
+
+
+## Memory
+
+### virtual_memory()
+
+
+
+### swap_memory()
 
 
 
 
 
+## Disks
+
+### disk_partitions(all=False)
+
+
+
+### disk_usage(path)
+
+
+
+### disk_io_counters(perdisk=False, nowrap=True)
+
+
+
+## Network
+
+### net_io_counters(pernic=False, nowrap=True)
+
+
+
+### net_connections(kind='inet')
+
+
+
+### net_if_addrs()
+
+
+
+### net_if_stats()
+
+
+
+## Sensors
+
+### sensors_temperatures(fahrenheit=False)
+
+
+
+###  sensors_fans()
+
+
+
+### sensors_battery()
 
 
 
 
 
+## Other system info
+
+### boot_time()
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
+### users()
 
