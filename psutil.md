@@ -143,11 +143,48 @@ scpufreq(current=931.42925, min=800.0, max=3500.0)
 
 ### virtual_memory()
 
+返回系统内存使用情况的统计信息的元组。主要指标如下：
 
+- **total**: 物理内存总量
+- **available**: 不需要调用swap而直接能提供给进程的内存可用大小。这个值是对内存占用量求和得出的，应该用于跨平台监视实际的内存使用情况。
+
+其他指标：
+
+- **used**: 已被占用的内存大小。 **total**和**free**不一定能匹配**used**的值。
+- **free**: 未被使用的内存大小。这个值并不反映能够直接使用的内存大小，**available** 才是。  **total**和**used**不一定能匹配**free**的值。
+- **active** *(UNIX)*: 目前正在使用或最近使用的内存，存在于RAM中。
+- **inactive** *(UNIX)*: 当前未使用的内存大小
+- **buffers** *(Linux, BSD)*: 文件系统元数据（metadata）的缓冲大小
+- **cached** *(Linux, BSD)*: 各种数据的缓存大小
+- **shared** *(Linux, BSD)*: 可以由多个进程同时访问的内存大小
+- **slab** *(Linux)*: 内核中数据结构的缓存（in-kernel data structures cache）
+- **wired** *(BSD, macOS)*: 永远只待在RAM中而不会移动到磁盘的内存大小（memory that is marked to always stay in RAM. It is never moved to disk）
+
+**used**和**available**之和并不一定等于**total**。在Windows上，**available**和**free**是相等的。
+
+```
+>>> mem = psutil.virtual_memory()
+>>> mem
+svmem(total=10367352832, available=6472179712, percent=37.6, used=8186245120, free=2181107712, active=4748992512, inactive=2758115328, buffers=790724608, cached=3500347392, shared=787554304, slab=199348224)
+```
 
 ### swap_memory()
 
+返回系统交换内存（swap）统计信息的元组。
 
+- **total**: swap总量，单位字节
+- **used**: 已用的swap大小，单位字节
+- **free**: 空闲的swap大小，单位字节
+- **percent**: swap使用百分比，计算方法：`(total - available) / total * 100`
+- **sin**: 累计从磁盘调入swap的大小，单位字节
+- **sout**: 累计从swap调出到磁盘的大小，单位字节
+
+在Windows上**sin**和**sout**始终为0。
+
+```
+>>> psutil.swap_memory()
+sswap(total=2097147904L, used=886620160L, free=1210527744L, percent=42.3, sin=1050411008, sout=1906720768)
+```
 
 
 
@@ -155,13 +192,61 @@ scpufreq(current=931.42925, min=800.0, max=3500.0)
 
 ### disk_partitions(all=False)
 
+返回所有已安装的磁盘分区的元组列表，包括设备，挂载点和文件系统类型，类似于UNIX上`df`命令。
 
+如果所有参数都为`False`，它会尝试区分并仅返回物理设备（例如硬盘，cd-rom驱动器，USB密钥）并忽略所有其他设备（例如`/dev/shm`等内存分区）。请注意，这可能在所有系统上都不完全可靠（例如，在BSD上会忽略此参数）。
+
+`fstype`字段是一个字符串，根据平台的不同而不同。在Linux上，它可以是`/proc/filesystems`中的一个值（例如，对于CD-ROM驱动器，ext3硬盘驱动器`iso9660`为`ext3`）。在Windows上，它通过GetDriveType确定，可以是`removable`，`fixed`，`remote`，`cdrom`，`unmounted`或`ramdisk`。在macOS和BSD上，它的值会在`getfsstat`命令中选择。
+
+```
+>>> psutil.disk_partitions()
+[sdiskpart(device='/dev/sda3', mountpoint='/', fstype='ext4', opts='rw,errors=remount-ro'),
+ sdiskpart(device='/dev/sda7', mountpoint='/home', fstype='ext4', opts='rw')]
+```
 
 ### disk_usage(path)
 
+返回指定路径分区的磁盘使用情况统计信息的元组，包括以字节为单位的总空间，已用空间和可用空间，以及百分比使用情况。如果path不存在，则引发OSError。
 
+```
+>>> psutil.disk_usage('/')
+sdiskusage(total=21378641920, used=4809781248, free=15482871808, percent=22.5)
+```
+
+> UNIX通常为root用户保留总磁盘空间的5％。 UNIX上的**total**字段和**used**字段表示总的总空间和已用空间，而**free**表示用户可用的空间，**percent**表示用户的利用率。这就是为什么百分比值可能看起来比预期的大5％。
 
 ### disk_io_counters(perdisk=False, nowrap=True)
+
+返回系统范围的磁盘I/O统计信息的元组。通用字段如下：
+
+- **read_count**: 读取的数量
+- **write_count**: 写入的数量
+- **read_bytes**: 读取的字节量
+- **write_bytes**: 写入的字节量
+
+平台特定属性：
+
+- **read_time**: (不包括*NetBSD* 和 *OpenBSD*) 从磁盘读取数据的时间，单位毫秒
+- **write_time**: (不包括 *NetBSD* 和 *OpenBSD*) 写入磁盘的时间，单位毫秒
+- **busy_time**: (*Linux*, *FreeBSD*) 实际I/O所花的时间，单位毫秒
+- **read_merged_count** (*Linux*): 合并读的数量（merged reads）
+- **write_merged_count** (*Linux*): 合并写的数量（merged writes）
+
+如果`perdisk`为`True`，则会返回系统上安装的每个物理磁盘信息的**字典**，其中**分区名称**为键，**信息元组**为值。
+
+在某些系统（如Linux）上，在非常繁忙或已长期存在的系统上，内核返回的数字可能会溢出并清零（wrap）。如果`nowrap`为`True`，psutil将在函数调用中检测并调整这些数字，并将“旧值”添加到“新值”，以便返回的数字将**始终增加或保持不变**，但永远不会减少。`disk_io_counters.cache_clear()`可用于使`nowrap`缓存无效。在Windows上，可能需要首先从`cmd.exe`发出`diskperf -y`命令才能启用IO计数器。在无盘机器上，如果`perdisk`为`True`，则此函数将返回`None`或`{}`。
+
+> Note：在Windows上“diskperf -y”命令可能需要先执行，否则此函数将找不到任何磁盘。
+
+```
+>>> psutil.disk_io_counters()
+sdiskio(read_count=8141, write_count=2431, read_bytes=290203, write_bytes=537676, read_time=5868, write_time=94922)
+
+>>> psutil.disk_io_counters(perdisk=True)
+{'sda1': sdiskio(read_count=920, write_count=1, read_bytes=2933248, write_bytes=512, read_time=6016, write_time=4),
+ 'sda2': sdiskio(read_count=18707, write_count=8830, read_bytes=6060, write_bytes=3443, read_time=24585, write_time=1572),
+ 'sdb1': sdiskio(read_count=161, write_count=0, read_bytes=786432, write_bytes=0, read_time=44, write_time=0)}
+```
 
 
 
