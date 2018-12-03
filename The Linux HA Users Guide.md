@@ -21,10 +21,10 @@ tags: [高可用, 翻译, 集群]
     * [非阻塞日志守护进程](#非阻塞日志进程)
 * [安装Heartbeat](#安装Heartbeat)
   * [源码构建安装](#源码构建安装)
-    * [源码构建安装Cluster Glue](#源码构建安装Cluster Glue)
-      * [Cluster Glue构建的先决条件](#Cluster Glue构建的先决条件)
-      * [下载Cluster Glue源码](#下载Cluster Glue源码)
-      * [构建Cluster Glue](#构建Cluster Glue)
+    * [源码构建安装Cluster-Glue](#源码构建安装Cluster-Glue)
+      * [Cluster-Glue构建的先决条件](#Cluster-Glue构建的先决条件)
+      * [下载Cluster-Glue源码](#下载Cluster-Glue源码)
+      * [构建Cluster-Glue](#构建Cluster-Glue)
       * [构建包](#构建包)
     * [源码构建安装Heartbeat](#源码构建安装Heartbeat)
       * [Heartbeat构建的先决条件](#Heartbeat构建的先决条件)
@@ -39,7 +39,7 @@ tags: [高可用, 翻译, 集群]
   * [创建初始Heartbeat配置](#创建初始Heartbeat配置)
     * [ha.cf文件](#ha.cf文件)
     * [authkeys文件](#authkeys文件)
-    * [将群集配置传播到群集节点](#authkeys文件)
+    * [将集群配置传播到集群节点](#authkeys文件)
     * [启动Heartbeat服务](#启动Heartbeat服务)
     * [Heartbeat的更多搭配](#Heartbeat的更多搭配)
   * [升级Heartbeat版本](#升级Heartbeat版本)
@@ -83,7 +83,7 @@ Heartbeat是一个守护程序，为其客户端提供集群基础结构（通�
 
 ### 通信模块
 
-Heartbeat通信模块能基本上在任何媒介（无论是否基于IP）上提供强认证的、本地有序的多播消息传递功能。 Heartbeat支持通过以下网络类型进行群集通信：
+Heartbeat通信模块能基本上在任何媒介（无论是否基于IP）上提供强认证的、本地有序的多播消息传递功能。 Heartbeat支持通过以下网络类型进行集群通信：
 
 * 单播UDP over IPv4
 * 广播UDP over IPv4
@@ -159,9 +159,9 @@ logd是Heartbeat的日志记录守护程序，能够记录到syslog守护程序�
 
 
 
-### 源码构建安装Cluster Glue
+### 源码构建安装Cluster-Glue
 
-#### Cluster Glue构建的先决条件
+#### Cluster-Glue构建的先决条件
 
 构建Cluster Glue需要在构建系统上存在以下工具和库：
 
@@ -175,7 +175,7 @@ logd是Heartbeat的日志记录守护程序，能够记录到syslog守护程序�
 
 
 
-#### 下载Cluster Glue源码
+#### 下载Cluster-Glue源码
 
 有几个选项可用于检索Cluster Glue源代码，以便在目标系统上本地构建。
 
@@ -218,7 +218,7 @@ updating working directory
 
 
 
-#### 构建Cluster Glue
+#### 构建Cluster-Glue
 
 构建Cluster Glue是一个广泛使用GNU Autotools的自动化过程。在同一台机器上构建和安装时，通常只需要以下命令：
 
@@ -441,9 +441,9 @@ zypper install resource-agents pacemaker
 
 ## 创建初始Heartbeat配置
 
-对于任何Heartbeat群集，必须提供以下配置文件：
+对于任何Heartbeat集群，必须提供以下配置文件：
 
--  `/etc/ha.d/ha.cf`：全局群集配置文件
+-  `/etc/ha.d/ha.cf`：全局集群配置文件
 -  `/etc/ha.d/authkeys` ：包含用于相互节点身份验证的密钥的文件
 
 
@@ -465,7 +465,7 @@ node bob
 pacemaker respawn
 ```
 
-将`autojoin`设置为`none`将禁用集群节点自动发现，并要求使用节点选项显式列出群集节点。 这加速了具有固定少量节点的集群的启动。
+将`autojoin`设置为`none`将禁用集群节点自动发现，并要求使用节点选项显式列出集群节点。 这加速了具有固定少量节点的集群的启动。
 
 此示例假定`bond0`是集群与共享网络的接口，并且`eth2`是专用于两个节点之间的DRBD复制的接口。 因此，`bond0`可以用于多播心跳，而在`eth2`广播上是可行的，因为`eth2`不是共享网络。
 
@@ -505,7 +505,7 @@ chmod 0600 /etc/ha.d/authkeys
 
 
 
-### 将群集配置传播到群集节点
+### 将集群配置传播到集群节点
 
 为了传播`ha.cf`和`authkeys`配置文件的内容，您可以使用`ha_propagate`命令，您可以使用该命令调用
 
@@ -555,7 +555,7 @@ root      4236  4175  0 Nov08 ?        00:02:48     /usr/lib/heartbeat/stonithd
 102       5724  4238  0 Nov08 ?        00:04:47       /usr/lib/heartbeat/pengine
 ```
 
-最后，您还应该能够通过Pacemaker的`crm_mon`命令确认群集正在运行：
+最后，您还应该能够通过Pacemaker的`crm_mon`命令确认集群正在运行：
 
 ```
 # crm_mon -1
@@ -575,7 +575,7 @@ Online: [ alice bob ]
 
 ### Heartbeat的更多搭配
 
-现在您已经有了可用的Heartbeat配置，您将需要继续配置Pacemaker并添加群集资源。
+现在您已经有了可用的Heartbeat配置，您将需要继续配置Pacemaker并添加集群资源。
 
 以下文件供您阅读：
 
@@ -597,7 +597,7 @@ Online: [ alice bob ]
 
 #### 停止Heartbeat服务
 
-您应该在当前备用节点上开始升级过程，即当前未运行任何资源的群集节点。 如果您的群集正在使用主动-主动（active-active）配置（两个节点都在运行资源），请选择其中一个主机，并发出以下命令将所有资源传输到对等节点：
+您应该在当前备用节点上开始升级过程，即当前未运行任何资源的集群节点。 如果您的集群正在使用主动-主动（active-active）配置（两个节点都在运行资源），请选择其中一个主机，并发出以下命令将所有资源传输到对等节点：
 
 ```
 # hb_standby
@@ -613,7 +613,7 @@ Online: [ alice bob ]
 
 #### 升级软件
 
-在升级时，重要的是要记住单个的Heartbeat 2.1树已经分成模块化部分。 因此，您将用三个独立的软件替换Heartbeat：Cluster Glue，Pacemaker和Heartbeat 3，它只包含群集消息传递层。
+在升级时，重要的是要记住单个的Heartbeat 2.1树已经分成模块化部分。 因此，您将用三个独立的软件替换Heartbeat：Cluster Glue，Pacemaker和Heartbeat 3，它只包含集群消息传递层。
 
 * 从源代码升级：在您安装Heartbeat 2.1的解压缩归档文件中，运行`make uninstall`。 然后，安装Cluster Glue和Heartbeat。
 * 使用本地构建的软件包升级：手动安装软件包时，首先卸载heartbeat软件包。 然后安装cluster-glue，heartbeat3，resource-agents和pacemaker。
@@ -625,7 +625,7 @@ Online: [ alice bob ]
 
 #### 使能Heartbeat集群使用Pacemaker
 
-现在必须指示群集消息传递层在群集启动时启动Pacemaker。 为此，请添加：
+现在必须指示集群消息传递层在集群启动时启动Pacemaker。 为此，请添加：
 
 `crm respawn`到您的`ha.cf`配置文件。
 
@@ -635,32 +635,32 @@ Online: [ alice bob ]
 
 #### 重启Heartbeat
 
-您的群集现在可以在启用Pacemaker的模式下重新启动。 为此：
+您的集群现在可以在启用Pacemaker的模式下重新启动。 为此：
 
-1. 运行`/etc/init.d/heartbeat`停止在仍处于活动状态的节点上。 这将关闭您的群集资源。
-2. 在备用节点（创建CIB的节点）上运行`/etc/init.d/heartbeat`。 这将启动本地Heartbeat实例和Pacemaker，并等待其他群集节点加入。
+1. 运行`/etc/init.d/heartbeat`停止在仍处于活动状态的节点上。 这将关闭您的集群资源。
+2. 在备用节点（创建CIB的节点）上运行`/etc/init.d/heartbeat`。 这将启动本地Heartbeat实例和Pacemaker，并等待其他集群节点加入。
 3. 在另一个节点上运行`/etc/init.d/heartbeat start`。 这将启动本地Heartbeat实例和Pacemaker，自动获取CIB并启动应用程序。
 
 
 
 ### 从开启了CRM的Heartbeat2.1集群升级
 
-本节概述了将启用了内置CRM的Heartbeat 2.1群集升级到带有Pacemaker的Heartbeat 3.0所需的步骤。
+本节概述了将启用了内置CRM的Heartbeat 2.1集群升级到带有Pacemaker的Heartbeat 3.0所需的步骤。
 
 > 注：如果计划和执行得当，升级过程可以在几分钟内完成，无需停机。 强烈建议在尝试生产集群升级之前阅读并理解本节中概述的步骤。 
-> 必须以root身份运行本节中说明的所有命令。 不要在所有群集节点上并行执行各个步骤。 而是在继续下一个节点之前完成每个节点上的过程。
+> 必须以root身份运行本节中说明的所有命令。 不要在所有集群节点上并行执行各个步骤。 而是在继续下一个节点之前完成每个节点上的过程。
 
 
 
 #### 将集群放置在非托管模式
 
-通过此步骤，群集暂时放弃对其资源的控制。 这意味着群集在升级期间不再监视其节点或资源，并且在此期间不会纠正应用程序或节点故障。 但是，当前正在运行的资源将继续运行。
+通过此步骤，集群暂时放弃对其资源的控制。 这意味着集群在升级期间不再监视其节点或资源，并且在此期间不会纠正应用程序或节点故障。 但是，当前正在运行的资源将继续运行。
 
 ```
 # crm_attribute -t crm_config -n is_managed_default -v false
 ```
 
-在大多数配置中，单个资源不单独设置`is_managed`属性，因此群集范围的属性`is_managed_default`适用于所有这些属性。
+在大多数配置中，单个资源不单独设置`is_managed`属性，因此集群范围的属性`is_managed_default`适用于所有这些属性。
 
 如果在您的特定配置中您确实拥有设置了此属性的资源，则应将其删除以确保默认值适用：
 
@@ -672,13 +672,13 @@ Online: [ alice bob ]
 
 #### 备份CIB
 
-此时，保存群集信息库（CIB）的副本非常重要。 要保存的CIB存储在名为`cib.xml`的文件中，该文件通常位于`/var/lib/heartbeat/crm`中。
+此时，保存集群信息库（CIB）的副本非常重要。 要保存的CIB存储在名为`cib.xml`的文件中，该文件通常位于`/var/lib/heartbeat/crm`中。
 
 ```
 # cp /var/lib/heartbeat/crm/cib.xml ~
 ```
 
-您只需在当前连接到群集的一个节点上执行此步骤。 不要删除此文件，以后会恢复。
+您只需在当前连接到集群的一个节点上执行此步骤。 不要删除此文件，以后会恢复。
 
 
 
@@ -697,7 +697,7 @@ Online: [ alice bob ]
 
 #### 删除CRM的相关文件
 
-> 注：在继续本节之前，请验证是否已在其中一个群集节点上创建了CIB的备份副本
+> 注：在继续本节之前，请验证是否已在其中一个集群节点上创建了CIB的备份副本
 
 您现在应该从节点擦除本地CRM相关文件。 为此，请从CRM存储CIB信息的目录中删除所有文件，通常为`/var/lib/heartbeat/crm`。
 
@@ -709,7 +709,7 @@ Online: [ alice bob ]
 
 #### 重置CIB
 
-> 注：如果Heartbeat仍在所有群集节点上停止，并且所有群集节点都已擦除其CIB内容，则只应执行此步骤。 如果仍有剩余节点具有剩余CIB配置，按“删除CRM的相关文件”中所述进行操作。
+> 注：如果Heartbeat仍在所有集群节点上停止，并且所有集群节点都已擦除其CIB内容，则只应执行此步骤。 如果仍有剩余节点具有剩余CIB配置，按“删除CRM的相关文件”中所述进行操作。
 
 恢复CIB意味着将“备份CIB”中描述的CIB备份复制到`/var/lib/heartbeat/crm`目录。
 
@@ -719,13 +719,13 @@ Online: [ alice bob ]
 # chmod 0600 /var/lib/heartbeat/crm/cib.xml
 ```
 
-您必须仅在一个节点上执行此步骤，即您要在其上升级群集软件的第一个节点。 在所有其他节点上，`/var/lib/heartbeat/crm`目录必须保持为空——Pacemaker会自动分发CIB。
+您必须仅在一个节点上执行此步骤，即您要在其上升级集群软件的第一个节点。 在所有其他节点上，`/var/lib/heartbeat/crm`目录必须保持为空——Pacemaker会自动分发CIB。
 
 
 
 #### 升级软件
 
-在升级时，重要的是要记住单个的Heartbeat 2.1树已经分成模块化部分。 因此，您将用三个独立的软件替换Heartbeat：Cluster Glue，Pacemaker和Heartbeat 3，它只包含群集消息传递层。
+在升级时，重要的是要记住单个的Heartbeat 2.1树已经分成模块化部分。 因此，您将用三个独立的软件替换Heartbeat：Cluster Glue，Pacemaker和Heartbeat 3，它只包含集群消息传递层。
 
 * 从源代码升级：在您安装Heartbeat 2.1的解压缩归档文件中，运行`make uninstall`。 然后，安装Cluster Glue和Heartbeat。
 * 使用本地构建的软件包升级：手动安装软件包时，首先卸载heartbeat软件包。 然后安装cluster-glue，heartbeat3的包，resource-agents和pacemaker。
@@ -739,18 +739,18 @@ Online: [ alice bob ]
 
 >  注：如果您的软件包管理系统在安装后自动重新启动Heartbeat服务，则可以省略此步骤。
 
-首先，使用`/etc/init.d/heartbeat start`在恢复CIB的节点上重新启动Heartbeat（请参见“重置CIB”）。 然后，在剩余的群集节点上重复此命令。 此时，
+首先，使用`/etc/init.d/heartbeat start`在恢复CIB的节点上重新启动Heartbeat（请参见“重置CIB”）。 然后，在剩余的集群节点上重复此命令。 此时，
 
-* 群集仍处于非托管模式（意味着它不会启动，停止或监视任何资源）
+* 集群仍处于非托管模式（意味着它不会启动，停止或监视任何资源）
 * 集群在其节点之间重新分配旧CIB
 
-* 群集仍在使用升级前的CIB架构
+* 集群仍在使用升级前的CIB架构
 
 
 
 #### 将集群再置为托管模式
 
-升级群集软件后，建议将群集恢复为托管模式：
+升级集群软件后，建议将集群恢复为托管模式：
 
 ```
 # crm_attribute -t crm_config -n is_managed_default -v true
