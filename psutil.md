@@ -2,8 +2,8 @@
   * [CPU](#CPU)
   * [Memory](#Memory)
   * [Disks](#Disks)
-  * [Network](Network)
-  * [Sensors](Sensors)
+  * [Network](#Network)
+  * [Sensors](#Sensors)
   * [Other system info](#Other system info)
 
 psutil（进程和系统实用程序）是一个跨平台库，用于在Python中检索有关正在运行的进程和系统利用率（CPU，内存，磁盘，网络，传感器）的信息。它主要用于系统监视，分析和限制流程资源以及运行流程的管理。它实现了UNIX命令行工具提供的许多功能，例如：ps，top，lsof，netstat，ifconfig，who，df，kill，free，nice，ionice，iostat，iotop，uptime，pidof，tty，taskset，pmap。
@@ -236,7 +236,7 @@ sdiskusage(total=21378641920, used=4809781248, free=15482871808, percent=22.5)
 
 在某些系统（如Linux）上，在非常繁忙或已长期存在的系统上，内核返回的数字可能会溢出并清零（wrap）。如果`nowrap`为`True`，psutil将在函数调用中检测并调整这些数字，并将“旧值”添加到“新值”，以便返回的数字将**始终增加或保持不变**，但永远不会减少。`disk_io_counters.cache_clear()`可用于使`nowrap`缓存无效。在Windows上，可能需要首先从`cmd.exe`发出`diskperf -y`命令才能启用IO计数器。在无盘机器上，如果`perdisk`为`True`，则此函数将返回`None`或`{}`。
 
-> Note：在Windows上“diskperf -y”命令可能需要先执行，否则此函数将找不到任何磁盘。
+> Note：在Windows上`diskperf -y`命令可能需要先执行，否则此函数将找不到任何磁盘。
 
 ```
 >>> psutil.disk_io_counters()
@@ -288,9 +288,32 @@ sdiskio(read_count=8141, write_count=2431, read_bytes=290203, write_bytes=537676
 
 ### boot_time()
 
+返回自纪元（1970.1.1）以来以秒表示的系统启动时间。例：
 
-
-
+```
+>>> import psutil, datetime
+>>> psutil.boot_time()
+1389563460.0
+>>> datetime.datetime.fromtimestamp(psutil.boot_time()).strftime("%Y-%m-%d %H:%M:%S")
+'2014-01-12 22:51:00'
+```
 
 ### users()
+
+将当前在系统上连接的用户作为命名元组列表返回，包括以下字段：
+
+* user：用户名。
+* terminal：返回与用户关联的tty或伪tty（如果有），否则为None。
+* host：与条目关联的主机名（如果有）。
+* start：创建时间的浮点数，自纪元起，以秒为单位。
+* pid：登录过程的PID（如sshd，tmux，gdm-session-worker，...）。在Windows和OpenBSD上，它始终设置为None。
+
+例：
+
+```
+>>> import psutil
+>>> psutil.users()
+[suser(name='giampaolo', terminal='pts/2', host='localhost', started=1340737536.0, pid=1352),
+ suser(name='giampaolo', terminal='pts/3', host='localhost', started=1340737792.0, pid=1788)]
+```
 

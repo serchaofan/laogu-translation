@@ -5,3 +5,6 @@
 
 * python库
   * psutil
+* 服务器
+  * The Linux-HA User's Guide
+  * HAProxy Starter Guide
