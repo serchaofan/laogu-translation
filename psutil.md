@@ -254,17 +254,128 @@ sdiskio(read_count=8141, write_count=2431, read_bytes=290203, write_bytes=537676
 
 ### net_io_counters(pernic=False, nowrap=True)
 
+将系统范围的网络I/O统计信息作为命名元组返回，包括以下属性：
 
+* `bytes_sent`：发送的字节数
+* `bytes_recv`：接收的字节数
+* `packets_sent`：发送的包数
+* `packets_recv`：接收的包数
+* `errin`：接收时的错误总数
+* `errout`：发送时的错误总数
+* `dropin`：丢弃的传入数据包总数
+* `dropout`：丢弃的传出数据包总数（macOS和BSD总是0）
+
+如果`pernic`为`True`，则将系统上安装的每个网络接口的相同信息作为字典返回，其中网络接口名称为键，上面描述的命名元组为值。 在某些系统（如Linux）上，在非常繁忙或长期存在的系统上，内核返回的数字可能会溢出并换行（重新从零开始）。如果`nowrap`为`True`，psutil将在函数调用中检测并调整这些数字，并将“旧值”添加给“新值”，使返回的数字始终增加或保持不变，但永远不会减少。`net_io_counters.cache_clear()`可用于使`nowrap`缓存无效。 在没有网络接口的机器上，如果`pernic`为`True`，则此函数将返回`None`或`{}`。
+
+```
+>>> import psutil
+>>> psutil.net_io_counters()
+snetio(bytes_sent=14508483, bytes_recv=62749361, packets_sent=84311, packets_recv=94888, errin=0, errout=0, dropin=0, dropout=0)
+>>>
+>>> psutil.net_io_counters(pernic=True)
+{'lo': snetio(bytes_sent=547971, bytes_recv=547971, packets_sent=5075, packets_recv=5075, errin=0, errout=0, dropin=0, dropout=0),
+'wlan0': snetio(bytes_sent=13921765, bytes_recv=62162574, packets_sent=79097, packets_recv=89648, errin=0, errout=0, dropin=0, dropout=0)}
+```
 
 ### net_connections(kind='inet')
 
+将系统范围的套接字连接作为命名元组列表返回。 每个命名元组都提供7个属性：
 
+* fd：套接字文件描述符。 如果连接引用当前进程，则可以将其传递给`socket.fromfd()`以获取可用的套接字对象。 在Windows和SunOS上，它始终设置为`-1`。
+* family：地址族，AF_INET，AF_INET6或AF_UNIX。
+* type：地址类型，SOCK_STREAM或SOCK_DGRAM。
+* laddr：本地地址为`(ip，port)`命名元组或AF_UNIX套接字的路径。 
+* raddr：远程地址，作为`(ip，port)`命名元组，或者是UNIX套接字的绝对路径。 当远程端点未连接时，您将获得一个空元组（AF_INET *）或`""`（AF_UNIX）。
+* status：表示TCP连接的状态。 返回值是`psutil.CONN_ *`常量之一（字符串）。 对于UDP和UNIX套接字，这始终是`psutil.CONN_NONE`。
+* pid：打开套接字的进程的PID，如果可检索，否则为None。 在某些平台（例如Linux）上，此字段的可用性会根据进程权限（需要root）而更改。
+
+kind参数是一个字符串，用于过滤符合以下条件的连接：
+
+| **Kind value** | **Connections using**                              |
+| -------------- | -------------------------------------------------- |
+| `"inet"`       | IPv4 and IPv6                                      |
+| `"inet4"`      | IPv4                                               |
+| `"inet6"`      | IPv6                                               |
+| `"tcp"`        | TCP                                                |
+| `"tcp4"`       | TCP over IPv4                                      |
+| `"tcp6"`       | TCP over IPv6                                      |
+| `"udp"`        | UDP                                                |
+| `"udp4"`       | UDP over IPv4                                      |
+| `"udp6"`       | UDP over IPv6                                      |
+| `"unix"`       | UNIX socket (both UDP and TCP protocols)           |
+| `"all"`        | the sum of all the possible families and protocols |
+
+在macOS和AIX上，此功能需要root权限。 要获得每个进程的连接，请使用`Process.connections()`。例：
+
+```
+>>> import psutil
+>>> psutil.net_connections()
+[pconn(fd=115, family=<AddressFamily.AF_INET: 2>, type=<SocketType.SOCK_STREAM: 1>, laddr=addr(ip='10.0.0.1', port=48776), raddr=addr(ip='93.186.135.91', port=80), status='ESTABLISHED', pid=1254),
+ pconn(fd=117, family=<AddressFamily.AF_INET: 2>, type=<SocketType.SOCK_STREAM: 1>, laddr=addr(ip='10.0.0.1', port=43761), raddr=addr(ip='72.14.234.100', port=80), status='CLOSING', pid=2987),
+ pconn(fd=-1, family=<AddressFamily.AF_INET: 2>, type=<SocketType.SOCK_STREAM: 1>, laddr=addr(ip='10.0.0.1', port=60759), raddr=addr(ip='72.14.234.104', port=80), status='ESTABLISHED', pid=None),
+ pconn(fd=-1, family=<AddressFamily.AF_INET: 2>, type=<SocketType.SOCK_STREAM: 1>, laddr=addr(ip='10.0.0.1', port=51314), raddr=addr(ip='72.14.234.83', port=443), status='SYN_SENT', pid=None)
+ ...]
+```
+
+> 注意：
+>
+> * （macOS和AIX）除非以root用户身份运行，否则始终会引发`psutil.AccessDenied`。 这是操作系统的限制，而`lsof`也是如此。
+>
+> * （Solaris）不支持UNIX套接字。
+> * （Linux，FreeBSD）UNIX套接字的“raddr”字段始终设置为“”。 这是操作系统的限制。
+> * （OpenBSD）UNIX套接字的“laddr”和“raddr”字段始终设置为“”。 这是操作系统的限制。
 
 ### net_if_addrs()
 
+将与系统上安装的每个NIC（网络接口卡）关联的地址作为字典返回，该字典的键是NIC名称，值是分配给NIC的每个地址的命名元组列表。 每个命名元组包括5个字段：
 
+* family：地址族，AF_INET，AF_INET6或`psutil.AF_LINK`，指MAC地址。
+
+* address：主NIC地址（始终设置）。
+
+* netmask：网络掩码地址（可以是None）。
+
+* 广播：广播地址（可以是None）。
+
+* ptp：代表“点对点”; 它是点对点接口（通常是VPN）上的目标地址。 广播和ptp是互斥的。 可能是None。
+
+例：
+
+```
+>>> import psutil
+>>> psutil.net_if_addrs()
+{'lo': [snicaddr(family=<AddressFamily.AF_INET: 2>, address='127.0.0.1', netmask='255.0.0.0', broadcast='127.0.0.1', ptp=None),
+        snicaddr(family=<AddressFamily.AF_INET6: 10>, address='::1', netmask='ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff', broadcast=None, ptp=None),
+        snicaddr(family=<AddressFamily.AF_LINK: 17>, address='00:00:00:00:00:00', netmask=None, broadcast='00:00:00:00:00:00', ptp=None)],
+ 'wlan0': [snicaddr(family=<AddressFamily.AF_INET: 2>, address='192.168.1.3', netmask='255.255.255.0', broadcast='192.168.1.255', ptp=None),
+           snicaddr(family=<AddressFamily.AF_INET6: 10>, address='fe80::c685:8ff:fe45:641%wlan0', netmask='ffff:ffff:ffff:ffff::', broadcast=None, ptp=None),
+           snicaddr(family=<AddressFamily.AF_LINK: 17>, address='c4:85:08:45:06:41', netmask=None, broadcast='ff:ff:ff:ff:ff:ff', ptp=None)]}
+```
+
+>注意：
+>
+>* 如果你对其他族感兴趣（例如AF_BLUETOOTH），你可以使用更强大的netifaces扩展。
+>* 您可以拥有与每个接口关联的同一系列的多个地址（这就是dict值为列表的原因）。
+>* Windows不支持broadcast和ptp，并且始终为None。
 
 ### net_if_stats()
+
+将有关每个NIC（网络接口卡）的信息作为字典返回，该字典的键是NIC名称，值是带有以下字段的命名元组：
+
+* isup：指示NIC是否已启动并运行的布尔值。
+
+* duplex：双工通信类型; 它可以是NIC_DUPLEX_FULL，NIC_DUPLEX_HALF或NIC_DUPLEX_UNKNOWN。
+* speed：以兆字节（MB）表示的NIC速度，如果无法确定（例如'localhost'），它将被设置为0。
+* mtu：NIC的最大传输单位，以字节为单位。
+
+例：
+
+```
+>>> import psutil
+>>> psutil.net_if_stats()
+{'eth0': snicstats(isup=True, duplex=<NicDuplex.NIC_DUPLEX_FULL: 2>, speed=100, mtu=1500),
+ 'lo': snicstats(isup=True, duplex=<NicDuplex.NIC_DUPLEX_UNKNOWN: 0>, speed=0, mtu=65536)}
+```
 
 
 
