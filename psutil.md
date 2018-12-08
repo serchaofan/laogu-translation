@@ -1,3 +1,7 @@
+**psutil 文档**
+
+**仅翻译了方法与进程**
+
 * [与系统相关的方法](#与系统相关的方法)
   * [CPU](#CPU)
   * [Memory](#Memory)
@@ -5,6 +9,13 @@
   * [Network](#Network)
   * [Sensors](#Sensors)
   * [Other system info](#Other system info)
+* [进程](#进程)
+  * [方法](#方法)
+  * [异常](#异常)
+  * [Process类](#Process类)
+  * [Popen类](#Popen类)
+
+
 
 psutil（进程和系统实用程序）是一个跨平台库，用于在Python中检索有关正在运行的进程和系统利用率（CPU，内存，磁盘，网络，传感器）的信息。它主要用于系统监视，分析和限制流程资源以及运行流程的管理。它实现了UNIX命令行工具提供的许多功能，例如：ps，top，lsof，netstat，ifconfig，who，df，kill，free，nice，ionice，iostat，iotop，uptime，pidof，tty，taskset，pmap。
 
@@ -383,15 +394,62 @@ kind参数是一个字符串，用于过滤符合以下条件的连接：
 
 ### sensors_temperatures(fahrenheit=False)
 
+返回硬件温度。 每个条目都是一个名为元组，代表某个硬件温度传感器（它可能是CPU，硬盘或其他东西，具体取决于操作系统及其配置）。 除非将华氏温度设置为真，否则所有温度均以摄氏度表示。 如果OS不支持传感器，则返回空的dict。 例：
 
+```
+>>> import psutil
+>>> psutil.sensors_temperatures()
+{'acpitz': [shwtemp(label='', current=47.0, high=103.0, critical=103.0)],
+ 'asus': [shwtemp(label='', current=47.0, high=None, critical=None)],
+ 'coretemp': [shwtemp(label='Physical id 0', current=52.0, high=100.0, critical=100.0),
+              shwtemp(label='Core 0', current=45.0, high=100.0, critical=100.0),
+              shwtemp(label='Core 1', current=52.0, high=100.0, critical=100.0),
+              shwtemp(label='Core 2', current=45.0, high=100.0, critical=100.0),
+              shwtemp(label='Core 3', current=47.0, high=100.0, critical=100.0)]}
+```
+
+可用系统：Linux, FreeBSD
 
 ###  sensors_fans()
 
+返回硬件风扇速度。 每个条目都是一个名为元组，代表某个硬件传感器风扇。 风扇速度以RPM（每分钟轮数）表示。 如果OS不支持传感器，则返回空的dict。 例：
 
+```
+>>> import psutil
+>>> psutil.sensors_fans()
+{'asus': [sfan(label='cpu_fan', current=3200)]}
+```
+
+可用系统：Linux, macOS
 
 ### sensors_battery()
 
+将电池状态信息作为命名元组返回，包括以下值。 如果未安装电池或无法确定指标，则返回None。
 
+* percent：电池剩余百分比。
+
+* secsleft：电池电量耗尽前剩下的秒数的粗略近似值。 如果连接了交流电源线，则将其设置为`psutil.POWER_TIME_UNLIMITED`。 如果无法确定，则将其设置为`psutil.POWER_TIME_UNKNOWN`。
+
+* power_plugged：如果连接了交流电源线，则为True，否则为False。如果无法确定，则为None。
+
+ 例：
+
+````
+>>> import psutil
+>>>
+>>> def secs2hours(secs):
+...     mm, ss = divmod(secs, 60)
+...     hh, mm = divmod(mm, 60)
+...     return "%d:%02d:%02d" % (hh, mm, ss)
+...
+>>> battery = psutil.sensors_battery()
+>>> battery
+sbattery(percent=93, secsleft=16628, power_plugged=False)
+>>> print("charge = %s%%, time left = %s" % (battery.percent, secs2hours(battery.secsleft)))
+charge = 93%, time left = 4:37:08
+````
+
+可用系统: Linux, Windows, FreeBSD
 
 
 
@@ -408,6 +466,8 @@ kind参数是一个字符串，用于过滤符合以下条件的连接：
 >>> datetime.datetime.fromtimestamp(psutil.boot_time()).strftime("%Y-%m-%d %H:%M:%S")
 '2014-01-12 22:51:00'
 ```
+
+> 注：在Windows上，如果在不同进程中使用该函数，则该函数可能会返回1秒的时间
 
 ### users()
 
@@ -426,5 +486,166 @@ kind参数是一个字符串，用于过滤符合以下条件的连接：
 >>> psutil.users()
 [suser(name='giampaolo', terminal='pts/2', host='localhost', started=1340737536.0, pid=1352),
  suser(name='giampaolo', terminal='pts/3', host='localhost', started=1340737792.0, pid=1788)]
+```
+
+
+
+# 进程
+
+## 方法
+
+### pids()
+
+返回当前运行的PID列表。 要迭代所有进程并避免竞争条件，应首选`process_iter()`。
+
+```
+>>> import psutil
+>>> psutil.pids()
+[1, 2, 3, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, ..., 32498]
+```
+
+### process_iter(attr=None, ad_value=None)
+
+返回一个迭代器，为本地计算机上的所有正在运行的进程生成一个`Process`类实例。 每个实例只创建一次，然后缓存到内部表中，每次生成一个元素时都会更新。 检查缓存的进程实例的身份，以便在另一个进程重用PID时保证安全，在这种情况下，缓存的实例会更新。 这比`psutil.pids()`更适合迭代进程。返回进程的排序顺序基于其PID。  `attrs`和`ad_value`与`Process.as_dict()`中的含义相同。 如果指定了`attrs`，则在内部调用`Process.as_dict()`，并将生成的dict存储为`info`属性，该属性附加到返回的`Process`实例。如果`attrs`是一个空列表，它将检索所有进程信息（慢）。 用法示例：
+
+```
+>>> import psutil
+>>> for proc in psutil.process_iter():
+...     try:
+...         pinfo = proc.as_dict(attrs=['pid', 'name', 'username'])
+...     except psutil.NoSuchProcess:
+...         pass
+...     else:
+...         print(pinfo)
+...
+{'name': 'systemd', 'pid': 1, 'username': 'root'}
+{'name': 'kthreadd', 'pid': 2, 'username': 'root'}
+{'name': 'ksoftirqd/0', 'pid': 3, 'username': 'root'}
+...
+```
+
+使用`attrs`参数的更紧凑版本：
+
+```
+>>> import psutil
+>>> for proc in psutil.process_iter(attrs=['pid', 'name', 'username']):
+...     print(proc.info)
+...
+{'name': 'systemd', 'pid': 1, 'username': 'root'}
+{'name': 'kthreadd', 'pid': 2, 'username': 'root'}
+{'name': 'ksoftirqd/0', 'pid': 3, 'username': 'root'}
+...
+```
+
+用于创建`{pid：info，...}`数据结构的dict理解示例：
+
+```
+>>> import psutil
+>>> procs = {p.pid: p.info for p in psutil.process_iter(attrs=['name', 'username'])}
+>>> procs
+{1: {'name': 'systemd', 'username': 'root'},
+ 2: {'name': 'kthreadd', 'username': 'root'},
+ 3: {'name': 'ksoftirqd/0', 'username': 'root'},
+ ...}
+```
+
+显示如何按名称过滤进程的示例：
+
+```
+>>> import psutil
+>>> [p.info for p in psutil.process_iter(attrs=['pid', 'name']) if 'python' in p.info['name']]
+[{'name': 'python3', 'pid': 21947},
+ {'name': 'python', 'pid': 23835}]
+```
+
+### pid_exists(pid)
+
+检查当前进程列表中是否存在给定的PID。 这比`pid in psutil.pids()`更快，应该是首选。
+
+### wait_procs(procs, timeout=None, callback=None)
+
+等待`Process`实例列表终止的便捷方法。 返回一个`(gone,alive)`元组，指示哪些进程消失了，哪些进程仍然存活。  已离去的将有一个新的返回码属性，指示进程退出状态（对于不是子进程将为None）。   `callback`是一个函数，当一个正在等待的进程被终止并且一个`Process`实例作为回调参数传递时，它被调用。  一旦所有进程终止或发生超时（秒），此函数将立即返回。 与`Process.wait()`不同，如果发生超时，它不会引发`TimeoutExpired`。  典型的用例可能是：
+
+* 将SIGTERM发送到进程列表
+
+* 给它们一些时间来终止
+
+* 将SIGKILL发送给那些还活着的进程
+
+ 终止并等待此进程的所有子进程的示例：
+
+```
+import psutil
+
+def on_terminate(proc):
+    print("process {} terminated with exit code {}".format(proc, proc.returncode))
+
+procs = psutil.Process().children()
+for p in procs:
+    p.terminate()
+gone, alive = psutil.wait_procs(procs, timeout=3, callback=on_terminate)
+for p in alive:
+    p.kill()
+```
+
+
+
+## 异常
+
+### *class* psutil.Error
+
+基本异常类。 所有其他异常都继承自此异常。
+
+### *class* psutil.NoSuchProcess(*pid*, *name=None*, *msg=None*)
+
+当在当前进程列表中找不到具有给定pid的进程或进程不再存在时，由`Process`类方法引发。  name是进程在消失之前具有的名称，仅在先前调用`Process.name()`时才设置。
+
+### *class* psutil.ZombieProcess(*pid*, *name=None*, *ppid=None*, *msg=None*)
+
+在UNIX上查询僵尸进程时，可能会由`Process`类方法引发这种情况（Windows没有僵尸进程）。 根据所调用的方法，OS可能能够成功检索过程信息。 注意：这是`NoSuchProcess`的子类，因此如果您对检索僵尸进程不感兴趣（例如，在使用`process_iter()`时），您可以忽略此异常并捕获`NoSuchProcess`。
+
+### *class* psutil.AccessDenied(*pid=None*, *name=None*, *msg=None*)
+
+当执行操作的权限被拒绝时，由`Process`类方法引发。  name是进程的名称（可以是None）。
+
+### *class* psutil.TimeoutExpired(*seconds*, *pid=None*, *name=None*, *msg=None*)
+
+如果超时到期且进程仍处于活动状态，则由`Process.wait()`引发。
+
+
+
+## Process类
+
+
+
+## Popen类
+
+### *class* psutil.Popen(**args*, **\*kwargs*)
+
+是stdlib中`subprocess.Popen`的更方便的接口。 它启动一个子进程，你完全像使用`subprocess.Popen`时那样处理它，但是它还提供了`psutil.Process`类的所有方法。 对于两个类共有的方法名称，例如`send_signal()`，`terminate()`和`kill()` `psutil.Process`实现优先。
+
+> 注意：与`subprocess.Popen`不同，此类抢先检查PID是否已在`send_signal()`，`terminate()`和`kill()`上重用，以便您不会意外终止另一个进程
+
+```
+>>> import psutil
+>>> from subprocess import PIPE
+>>>
+>>> p = psutil.Popen(["/usr/bin/python", "-c", "print('hello')"], stdout=PIPE)
+>>> p.name()
+'python'
+>>> p.username()
+'giampaolo'
+>>> p.communicate()
+('hello\n', None)
+>>> p.wait(timeout=2)
+0
+```
+
+通过`with`语句支持`psutil.Popen`对象作为上下文管理器：在退出时，将关闭标准文件描述符，并等待进程。 所有Python版本都支持此功能。
+
+```
+>>> import psutil, subprocess
+>>> with psutil.Popen(["ifconfig"], stdout=subprocess.PIPE) as proc:
+>>>     log.write(proc.stdout.read())
 ```
 
