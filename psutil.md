@@ -616,6 +616,16 @@ for p in alive:
 
 ## Process类
 
+### *class* psutil.Process(*pid=None*)
+
+表示具有给定pid的OS进程。 如果省略pid，则使用当前进程pid（`os.getpid()`）。 
+如果pid不存在，则引发`NoSuchProcess`。 在Linux上，pid也可以引用线程ID（threads()方法返回的id字段）。访问此类的方法时，始终准备捕获`NoSuchProcess`，`ZombieProcess`和`AccessDenied`异常。`hash()`嵌入可以用于此类的实例，以便随着时间的推移单一地识别一个进程（哈希是通过混合进程PID和创建时间来确定的）。 因此它也可以与`set()`一起使用。
+
+> 注：为了有效地同时获取有关进程的多个信息，请确保使用`as_dict()`或`oneshot()`上下文管理器。
+
+> 这个类绑定到进程的方式是通过其PID唯一的。 这意味着如果进程终止并且OS重用其PID，则可能最终与另一个进程交互。 对进程标识进行抢先检查（通过PID 
+> +创建时间）的唯一例外是以下方法：`nice()`（set），`ionice()`（set），`cpu_affinity()`（set），`rlimit()`（set），`children()`，`parent()`，`suspend()`，`resume()`，`send_signal()`，`terminate()`，`kill()`。 要防止所有其他方法出现此问题，可以在查询进程或`process_iter()`之前使用`is_running()`，以防迭代所有进程。必须注意的是，除非您处理非常“旧”（非活动）的流程实例，否则这几乎不会成为问题。
+
 
 
 ## Popen类
